@@ -222,8 +222,6 @@ def main():
             use_mozjpeg = st.checkbox("Використовувати MozJPEG", value=True, help="Краще стиснення")
             if use_mozjpeg:
                 st.success("✅ MozJPEG активний")
-        else:
-            st.warning("⚠️ MozJPEG не встановлено")
 
         # Info
         st.divider()
