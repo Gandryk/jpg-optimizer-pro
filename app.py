@@ -1,6 +1,6 @@
 """
 JPG Optimizer Pro - Web Version (Streamlit)
-Оптимізація JPG зображень через браузер
+Професійний оптимізатор JPG з темною темою та мобільною адаптацією
 """
 
 import streamlit as st
@@ -19,45 +19,390 @@ st.set_page_config(
     page_title="JPG Optimizer Pro",
     page_icon="🖼️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"  # Better for mobile
 )
 
-# Custom CSS
+# Dark theme with neon accents CSS
 st.markdown("""
 <style>
+    /* Import font */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    /* Root variables */
+    :root {
+        --bg-primary: #0a0a0f;
+        --bg-secondary: #12121a;
+        --bg-card: #1a1a24;
+        --bg-hover: #22222e;
+        --text-primary: #ffffff;
+        --text-secondary: #a0a0b0;
+        --neon-cyan: #00f5ff;
+        --neon-purple: #bf00ff;
+        --neon-pink: #ff00aa;
+        --neon-green: #00ff88;
+        --gradient-1: linear-gradient(135deg, #00f5ff 0%, #bf00ff 100%);
+        --gradient-2: linear-gradient(135deg, #ff00aa 0%, #bf00ff 100%);
+        --shadow-neon: 0 0 20px rgba(0, 245, 255, 0.3);
+    }
+
+    /* Global styles */
+    .stApp {
+        background: var(--bg-primary);
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* Main container */
+    .main .block-container {
+        padding: 1rem 1rem 3rem 1rem;
+        max-width: 1200px;
+    }
+
+    /* Header styles */
     .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin-bottom: 0;
-    }
-    .sub-header {
-        color: #666;
-        margin-top: 0;
-    }
-    .stat-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
-        border-radius: 10px;
-        color: white;
         text-align: center;
+        padding: 2rem 1rem;
+        margin-bottom: 1rem;
     }
-    .stat-value {
-        font-size: 2rem;
-        font-weight: bold;
+
+    .app-title {
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        font-weight: 700;
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
     }
-    .stat-label {
-        opacity: 0.9;
+
+    .app-subtitle {
+        color: var(--text-secondary);
+        font-size: clamp(0.9rem, 2vw, 1.1rem);
     }
-    .success-box {
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        border-radius: 5px;
+
+    /* Card styles */
+    .card {
+        background: var(--bg-card);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid rgba(255,255,255,0.05);
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        border-color: rgba(0, 245, 255, 0.2);
+        box-shadow: var(--shadow-neon);
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Upload area */
+    .upload-area {
+        border: 2px dashed rgba(0, 245, 255, 0.3);
+        border-radius: 16px;
+        padding: 3rem 2rem;
+        text-align: center;
+        background: rgba(0, 245, 255, 0.02);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .upload-area:hover {
+        border-color: var(--neon-cyan);
+        background: rgba(0, 245, 255, 0.05);
+        box-shadow: var(--shadow-neon);
+    }
+
+    .upload-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .upload-text {
+        color: var(--text-primary);
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .upload-hint {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    /* Mode buttons */
+    .mode-btn {
+        background: var(--bg-card);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
         padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 0.5rem;
+    }
+
+    .mode-btn:hover {
+        border-color: var(--neon-cyan);
+        transform: translateY(-2px);
+    }
+
+    .mode-btn.active {
+        border-color: var(--neon-cyan);
+        background: rgba(0, 245, 255, 0.1);
+        box-shadow: var(--shadow-neon);
+    }
+
+    .mode-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .mode-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .mode-desc {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+
+    /* Stats cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .stat-card {
+        background: var(--bg-card);
+        border-radius: 12px;
+        padding: 1.25rem;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .stat-value {
+        font-size: clamp(1.5rem, 4vw, 2rem);
+        font-weight: 700;
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Progress bar */
+    .progress-container {
+        background: var(--bg-secondary);
+        border-radius: 10px;
+        height: 8px;
+        overflow: hidden;
         margin: 1rem 0;
     }
-    .stImage > img {
+
+    .progress-bar {
+        height: 100%;
+        background: var(--gradient-1);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+        box-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+    }
+
+    /* Buttons */
+    .stButton > button {
+        background: var(--gradient-1) !important;
+        color: #000 !important;
+        font-weight: 600 !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 0.75rem 2rem !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease !important;
+        width: 100%;
+    }
+
+    .stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: var(--shadow-neon) !important;
+    }
+
+    .stDownloadButton > button {
+        background: var(--bg-card) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--neon-cyan) !important;
+        border-radius: 12px !important;
+        padding: 0.75rem 1.5rem !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .stDownloadButton > button:hover {
+        background: rgba(0, 245, 255, 0.1) !important;
+        box-shadow: var(--shadow-neon) !important;
+    }
+
+    /* Sliders */
+    .stSlider > div > div {
+        background: var(--bg-secondary) !important;
+    }
+
+    .stSlider > div > div > div > div {
+        background: var(--gradient-1) !important;
+    }
+
+    /* Checkboxes */
+    .stCheckbox > label {
+        color: var(--text-primary) !important;
+    }
+
+    /* Radio buttons */
+    .stRadio > label {
+        color: var(--text-primary) !important;
+    }
+
+    .stRadio > div {
+        background: var(--bg-card);
+        border-radius: 12px;
+        padding: 0.5rem;
+    }
+
+    /* File uploader */
+    .stFileUploader > div {
+        background: var(--bg-card) !important;
+        border: 2px dashed rgba(0, 245, 255, 0.3) !important;
+        border-radius: 16px !important;
+    }
+
+    .stFileUploader > div:hover {
+        border-color: var(--neon-cyan) !important;
+    }
+
+    /* Expander */
+    .streamlit-expanderHeader {
+        background: var(--bg-card) !important;
+        border-radius: 12px !important;
+        color: var(--text-primary) !important;
+    }
+
+    /* Comparison section */
+    .comparison-container {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .comparison-image {
+        flex: 1;
+        min-width: 280px;
+        background: var(--bg-card);
+        border-radius: 12px;
+        padding: 1rem;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .comparison-label {
+        text-align: center;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
         border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .label-before {
+        background: rgba(255, 0, 170, 0.2);
+        color: var(--neon-pink);
+    }
+
+    .label-after {
+        background: rgba(0, 255, 136, 0.2);
+        color: var(--neon-green);
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .main .block-container {
+            padding: 0.5rem 0.5rem 2rem 0.5rem;
+        }
+
+        .main-header {
+            padding: 1rem 0.5rem;
+        }
+
+        .card {
+            padding: 1rem;
+            border-radius: 12px;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .stat-card {
+            padding: 1rem;
+        }
+
+        .upload-area {
+            padding: 2rem 1rem;
+        }
+
+        .comparison-image {
+            min-width: 100%;
+        }
+    }
+
+    /* Animations */
+    @keyframes glow {
+        0%, 100% { box-shadow: 0 0 20px rgba(0, 245, 255, 0.3); }
+        50% { box-shadow: 0 0 30px rgba(0, 245, 255, 0.5); }
+    }
+
+    .glow-animation {
+        animation: glow 2s ease-in-out infinite;
+    }
+
+    /* Success message */
+    .success-message {
+        background: rgba(0, 255, 136, 0.1);
+        border: 1px solid var(--neon-green);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        color: var(--neon-green);
+        margin: 1rem 0;
+    }
+
+    /* Table styles */
+    .stDataFrame {
+        background: var(--bg-card) !important;
+        border-radius: 12px !important;
+    }
+
+    /* Divider */
+    hr {
+        border-color: rgba(255,255,255,0.1) !important;
+        margin: 2rem 0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -83,11 +428,9 @@ def format_size(bytes_size: int) -> str:
 
 def optimize_with_pillow(img: Image.Image, quality: int, remove_metadata: bool) -> Tuple[bytes, dict]:
     """Optimize image using Pillow"""
-    # Convert if needed
     if img.mode in ('RGBA', 'P', 'CMYK'):
         img = img.convert('RGB')
 
-    # Get EXIF
     exif_data = None
     if not remove_metadata:
         try:
@@ -95,11 +438,9 @@ def optimize_with_pillow(img: Image.Image, quality: int, remove_metadata: bool) 
         except:
             pass
 
-    # Apply slight sharpening for compression compensation
     if quality < 90:
         img = img.filter(ImageFilter.UnsharpMask(radius=0.5, percent=20, threshold=2))
 
-    # Save to buffer
     buffer = io.BytesIO()
     save_kwargs = {
         'quality': quality,
@@ -119,21 +460,17 @@ def optimize_with_pillow(img: Image.Image, quality: int, remove_metadata: bool) 
 def optimize_with_mozjpeg(img: Image.Image, quality: int, remove_metadata: bool, mozjpeg_path: str, original_bytes: bytes) -> Tuple[bytes, dict]:
     """Optimize using MozJPEG"""
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Save original to temp file
         input_path = os.path.join(tmpdir, "input.jpg")
         ppm_path = os.path.join(tmpdir, "temp.ppm")
         output_path = os.path.join(tmpdir, "output.jpg")
 
-        # Write original
         with open(input_path, 'wb') as f:
             f.write(original_bytes)
 
-        # Decode to PPM
         djpeg_path = mozjpeg_path.replace('cjpeg', 'djpeg')
         subprocess.run([djpeg_path, "-outfile", ppm_path, input_path],
                       check=True, capture_output=True, timeout=60)
 
-        # Encode with MozJPEG
         cmd = [mozjpeg_path, "-quality", str(quality)]
         if quality >= 90:
             cmd.extend(["-sample", "1x1"])
@@ -141,7 +478,6 @@ def optimize_with_mozjpeg(img: Image.Image, quality: int, remove_metadata: bool,
 
         subprocess.run(cmd, check=True, capture_output=True, timeout=60)
 
-        # Copy EXIF if needed
         if not remove_metadata:
             try:
                 original_exif = piexif.load(input_path)
@@ -150,11 +486,8 @@ def optimize_with_mozjpeg(img: Image.Image, quality: int, remove_metadata: bool,
             except:
                 pass
 
-        # Read result
         with open(output_path, 'rb') as f:
-            result = f.read()
-
-        return result, {'width': img.width, 'height': img.height}
+            return f.read(), {'width': img.width, 'height': img.height}
 
 
 def optimize_lossless(original_bytes: bytes, remove_metadata: bool) -> bytes:
@@ -167,7 +500,6 @@ def optimize_lossless(original_bytes: bytes, remove_metadata: bool) -> bytes:
             break
 
     if not jpegtran_path:
-        # Fallback - return original
         return original_bytes
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -187,62 +519,59 @@ def optimize_lossless(original_bytes: bytes, remove_metadata: bool) -> bytes:
 
 
 def main():
-    # Header
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown('<p class="main-header">🖼️ JPG Optimizer Pro</p>', unsafe_allow_html=True)
-        st.markdown('<p class="sub-header">Професійна оптимізація JPG зображень</p>', unsafe_allow_html=True)
-
     # Check MozJPEG
     has_mozjpeg, mozjpeg_path = check_mozjpeg()
 
-    # Sidebar settings
-    with st.sidebar:
-        st.header("⚙️ Налаштування")
+    # Header
+    st.markdown("""
+    <div class="main-header">
+        <div class="app-title">🖼️ JPG Optimizer Pro</div>
+        <div class="app-subtitle">Професійна оптимізація зображень • Швидко • Безпечно • Безкоштовно</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-        # Mode selection
-        mode = st.radio(
-            "Режим оптимізації",
-            ["🔒 Lossless", "⚖️ Balanced", "📦 Maximum"],
-            index=1,
-            help="Lossless - без втрат, Balanced - баланс, Maximum - максимальне стиснення"
-        )
+    # Settings in expander (better for mobile)
+    with st.expander("⚙️ Налаштування", expanded=False):
+        col1, col2 = st.columns(2)
 
-        # Quality slider (for Balanced mode)
-        quality = 85
-        if "Balanced" in mode:
-            quality = st.slider("Якість", 60, 100, 85, help="Вища якість = більший файл")
+        with col1:
+            mode = st.radio(
+                "Режим оптимізації",
+                ["⚖️ Balanced", "🔒 Lossless", "📦 Maximum"],
+                index=0,
+                help="Balanced - баланс якості, Lossless - без втрат, Maximum - макс. стиснення"
+            )
 
-        # Options
-        st.divider()
-        remove_metadata = st.checkbox("Видалити EXIF метадані", help="Зменшує розмір, але втрачає дату/GPS")
+        with col2:
+            quality = 85
+            if "Balanced" in mode:
+                quality = st.slider("Якість", 60, 100, 85)
 
-        use_mozjpeg = False
-        if has_mozjpeg:
-            use_mozjpeg = st.checkbox("Використовувати MozJPEG", value=True, help="Краще стиснення")
-            if use_mozjpeg:
-                st.success("✅ MozJPEG активний")
+            remove_metadata = st.checkbox("Видалити EXIF", help="Зменшує розмір")
 
-        # Info
-        st.divider()
-        st.caption("📊 Рекомендації:")
-        st.caption("• Архів фото: Lossless або 90-95%")
-        st.caption("• Загальне: 80-85%")
-        st.caption("• Веб: Maximum (70%)")
+    # File uploader
+    st.markdown("""
+    <div class="card">
+        <div class="card-title">📂 Завантаження файлів</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # Main content
     uploaded_files = st.file_uploader(
-        "📂 Завантажте JPG файли",
+        "Перетягніть файли або натисніть для вибору",
         type=['jpg', 'jpeg'],
         accept_multiple_files=True,
-        help="Перетягніть файли сюди або натисніть для вибору"
+        label_visibility="collapsed"
     )
 
     if uploaded_files:
-        st.info(f"📁 Завантажено файлів: {len(uploaded_files)}")
+        st.markdown(f"""
+        <div style="text-align: center; padding: 1rem; color: var(--neon-cyan);">
+            ✅ Завантажено: <strong>{len(uploaded_files)}</strong> файлів
+        </div>
+        """, unsafe_allow_html=True)
 
-        if st.button("🚀 Оптимізувати", type="primary", use_container_width=True):
-            # Initialize session state for results
+        # Optimize button
+        if st.button("🚀 Оптимізувати", use_container_width=True):
             results = []
             total_original = 0
             total_optimized = 0
@@ -251,34 +580,34 @@ def main():
             status_text = st.empty()
 
             for i, uploaded_file in enumerate(uploaded_files):
-                status_text.text(f"Обробка: {uploaded_file.name}...")
+                status_text.markdown(f"""
+                <div style="text-align: center; color: var(--text-secondary);">
+                    Обробка: {uploaded_file.name}...
+                </div>
+                """, unsafe_allow_html=True)
 
                 try:
-                    # Read original
                     original_bytes = uploaded_file.read()
                     original_size = len(original_bytes)
                     total_original += original_size
 
-                    # Open image
                     img = Image.open(io.BytesIO(original_bytes))
 
-                    # Optimize based on mode
                     if "Lossless" in mode:
                         optimized_bytes = optimize_lossless(original_bytes, remove_metadata)
                     elif "Maximum" in mode:
-                        if use_mozjpeg and has_mozjpeg:
+                        if has_mozjpeg:
                             optimized_bytes, _ = optimize_with_mozjpeg(img, 70, remove_metadata, mozjpeg_path, original_bytes)
                         else:
                             optimized_bytes, _ = optimize_with_pillow(img, 70, remove_metadata)
-                    else:  # Balanced
-                        if use_mozjpeg and has_mozjpeg:
+                    else:
+                        if has_mozjpeg:
                             optimized_bytes, _ = optimize_with_mozjpeg(img, quality, remove_metadata, mozjpeg_path, original_bytes)
                         else:
                             optimized_bytes, _ = optimize_with_pillow(img, quality, remove_metadata)
 
                     optimized_size = len(optimized_bytes)
 
-                    # Only use if smaller
                     if optimized_size >= original_size:
                         optimized_bytes = original_bytes
                         optimized_size = original_size
@@ -292,17 +621,16 @@ def main():
                         'saved': original_size - optimized_size,
                         'original_bytes': original_bytes,
                         'optimized_bytes': optimized_bytes,
-                        'image': img
                     })
 
                 except Exception as e:
-                    st.error(f"❌ Помилка обробки {uploaded_file.name}: {str(e)}")
+                    st.error(f"❌ Помилка: {uploaded_file.name}")
 
                 progress_bar.progress((i + 1) / len(uploaded_files))
 
-            status_text.text("✅ Готово!")
+            status_text.empty()
+            progress_bar.empty()
 
-            # Store results in session state
             st.session_state['results'] = results
             st.session_state['total_original'] = total_original
             st.session_state['total_optimized'] = total_optimized
@@ -315,36 +643,51 @@ def main():
         total_saved = total_original - total_optimized
         saved_percent = (total_saved / total_original * 100) if total_original > 0 else 0
 
-        st.divider()
+        # Success message
+        st.markdown(f"""
+        <div class="success-message">
+            ✨ Оптимізація завершена! Зекономлено {format_size(total_saved)} ({saved_percent:.1f}%)
+        </div>
+        """, unsafe_allow_html=True)
 
-        # Stats cards
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-            st.metric("📄 Оригінал", format_size(total_original))
-        with col2:
-            st.metric("📦 Після", format_size(total_optimized))
-        with col3:
-            st.metric("💾 Зекономлено", format_size(total_saved), f"{saved_percent:.1f}%")
-        with col4:
-            st.metric("📊 Файлів", len(results))
-
-        st.divider()
+        # Stats
+        st.markdown(f"""
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{format_size(total_original)}</div>
+                <div class="stat-label">До</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{format_size(total_optimized)}</div>
+                <div class="stat-label">Після</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{format_size(total_saved)}</div>
+                <div class="stat-label">Зекономлено</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{saved_percent:.0f}%</div>
+                <div class="stat-label">Стиснення</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Download section
-        st.subheader("📥 Завантажити результати")
+        st.markdown("""
+        <div class="card">
+            <div class="card-title">📥 Завантажити результати</div>
+        </div>
+        """, unsafe_allow_html=True)
 
         col1, col2 = st.columns(2)
 
         with col1:
-            # Download all as ZIP
             if len(results) > 1:
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
                     for r in results:
-                        # Add _optimized suffix
                         name, ext = os.path.splitext(r['name'])
-                        new_name = f"{name}_optimized{ext}"
+                        new_name = f"{name}_opt{ext}"
                         zf.writestr(new_name, r['optimized_bytes'])
 
                 zip_buffer.seek(0)
@@ -357,103 +700,89 @@ def main():
                 )
 
         with col2:
-            # Download individual
             if len(results) == 1:
                 r = results[0]
                 name, ext = os.path.splitext(r['name'])
                 st.download_button(
-                    f"💾 Завантажити {r['name']}",
+                    f"💾 Завантажити файл",
                     r['optimized_bytes'],
-                    file_name=f"{name}_optimized{ext}",
+                    file_name=f"{name}_opt{ext}",
                     mime="image/jpeg",
                     use_container_width=True
                 )
 
-        st.divider()
-
-        # Comparison view
-        st.subheader("🔍 Порівняння До / Після")
+        # Comparison
+        st.markdown("---")
+        st.markdown("""
+        <div class="card">
+            <div class="card-title">🔍 Порівняння До / Після</div>
+        </div>
+        """, unsafe_allow_html=True)
 
         if len(results) > 1:
             selected_file = st.selectbox(
-                "Виберіть файл для порівняння",
-                options=[r['name'] for r in results]
+                "Виберіть файл",
+                options=[r['name'] for r in results],
+                label_visibility="collapsed"
             )
             selected = next(r for r in results if r['name'] == selected_file)
         else:
             selected = results[0]
 
-        # File info
-        saved_pct = (selected['saved'] / selected['original_size'] * 100) if selected['original_size'] > 0 else 0
-        st.info(f"📊 {selected['name']}: {format_size(selected['original_size'])} → {format_size(selected['optimized_size'])} (зекономлено {format_size(selected['saved'])}, {saved_pct:.1f}%)")
-
-        # Side by side comparison
+        # Side by side
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("**Оригінал**")
+            st.markdown('<div class="comparison-label label-before">📷 Оригінал</div>', unsafe_allow_html=True)
             original_img = Image.open(io.BytesIO(selected['original_bytes']))
             st.image(original_img, use_container_width=True)
+            st.caption(f"Розмір: {format_size(selected['original_size'])}")
 
         with col2:
-            st.markdown("**Оптимізовано**")
+            st.markdown('<div class="comparison-label label-after">✨ Оптимізовано</div>', unsafe_allow_html=True)
             optimized_img = Image.open(io.BytesIO(selected['optimized_bytes']))
             st.image(optimized_img, use_container_width=True)
+            st.caption(f"Розмір: {format_size(selected['optimized_size'])}")
 
         # Zoom comparison
-        st.subheader("🔬 Детальне порівняння")
-        st.caption("Перетягніть слайдер для вибору області")
+        with st.expander("🔬 Детальне порівняння (зум)"):
+            zoom_level = st.slider("Збільшення", 2, 8, 4, key="zoom")
 
-        zoom_level = st.slider("Збільшення", 2, 8, 4)
+            col1, col2 = st.columns(2)
+            with col1:
+                x_pos = st.slider("X", 0, 100, 50, key="xpos")
+            with col2:
+                y_pos = st.slider("Y", 0, 100, 50, key="ypos")
 
-        # Position selectors
-        col1, col2 = st.columns(2)
-        with col1:
-            x_pos = st.slider("Позиція X", 0, 100, 50, help="Горизонтальна позиція")
-        with col2:
-            y_pos = st.slider("Позиція Y", 0, 100, 50, help="Вертикальна позиція")
+            img_w, img_h = original_img.size
+            crop_size = min(img_w, img_h) // zoom_level
 
-        # Calculate crop region
-        img_w, img_h = original_img.size
-        crop_size = min(img_w, img_h) // zoom_level
+            center_x = int(x_pos / 100 * img_w)
+            center_y = int(y_pos / 100 * img_h)
 
-        center_x = int(x_pos / 100 * img_w)
-        center_y = int(y_pos / 100 * img_h)
+            left = max(0, center_x - crop_size // 2)
+            top = max(0, center_y - crop_size // 2)
+            right = min(img_w, left + crop_size)
+            bottom = min(img_h, top + crop_size)
 
-        left = max(0, center_x - crop_size // 2)
-        top = max(0, center_y - crop_size // 2)
-        right = min(img_w, left + crop_size)
-        bottom = min(img_h, top + crop_size)
+            col1, col2 = st.columns(2)
 
-        # Crop and display
-        col1, col2 = st.columns(2)
+            with col1:
+                st.markdown('<div class="comparison-label label-before">Оригінал (зум)</div>', unsafe_allow_html=True)
+                cropped_original = original_img.crop((left, top, right, bottom))
+                st.image(cropped_original.resize((400, 400), Image.Resampling.NEAREST), use_container_width=True)
 
-        with col1:
-            st.markdown("**Оригінал (збільшено)**")
-            cropped_original = original_img.crop((left, top, right, bottom))
-            st.image(cropped_original.resize((400, 400), Image.Resampling.NEAREST), use_container_width=True)
+            with col2:
+                st.markdown('<div class="comparison-label label-after">Оптимізовано (зум)</div>', unsafe_allow_html=True)
+                cropped_optimized = optimized_img.crop((left, top, right, bottom))
+                st.image(cropped_optimized.resize((400, 400), Image.Resampling.NEAREST), use_container_width=True)
 
-        with col2:
-            st.markdown("**Оптимізовано (збільшено)**")
-            cropped_optimized = optimized_img.crop((left, top, right, bottom))
-            st.image(cropped_optimized.resize((400, 400), Image.Resampling.NEAREST), use_container_width=True)
-
-        # Results table
-        st.divider()
-        st.subheader("📋 Деталі обробки")
-
-        table_data = []
-        for r in results:
-            saved_pct = (r['saved'] / r['original_size'] * 100) if r['original_size'] > 0 else 0
-            table_data.append({
-                "Файл": r['name'],
-                "Оригінал": format_size(r['original_size']),
-                "Після": format_size(r['optimized_size']),
-                "Зекономлено": format_size(r['saved']),
-                "%": f"{saved_pct:.1f}%"
-            })
-
-        st.dataframe(table_data, use_container_width=True, hide_index=True)
+    # Footer
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.85rem;">
+        Зроблено з 💜 • Ваші файли не зберігаються на сервері
+    </div>
+    """, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
