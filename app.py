@@ -426,8 +426,55 @@ def format_size(bytes_size: int) -> str:
     return f"{bytes_size:.1f} ТБ"
 
 
+def extract_icc_profile(img: Image.Image) -> Optional[bytes]:
+    """Extract ICC color profile from a PIL Image"""
+    try:
+        return img.info.get('icc_profile')
+    except:
+        return None
+
+
+def inject_icc_profile(jpeg_data: bytes, icc_data: bytes) -> bytes:
+    """Inject ICC color profile into JPEG bytes without re-encoding.
+    Preserves exact pixel data while adding the color profile metadata."""
+    if not icc_data:
+        return jpeg_data
+
+    # Verify JPEG signature
+    if jpeg_data[:2] != b'\xff\xd8':
+        return jpeg_data
+
+    # Build ICC APP2 marker segment
+    # Format: 0xFFE2 + length(2 bytes) + "ICC_PROFILE\0" + chunk_num(1) + total_chunks(1) + data
+    max_chunk_data = 65533 - 14  # Max data per chunk (65519 bytes)
+
+    if len(icc_data) <= max_chunk_data:
+        # Single chunk (covers virtually all real-world ICC profiles)
+        icc_header = b'ICC_PROFILE\x00\x01\x01'
+        marker_data = icc_header + icc_data
+        marker_length = len(marker_data) + 2
+        app2_segment = b'\xff\xe2' + marker_length.to_bytes(2, 'big') + marker_data
+    else:
+        # Multiple chunks for very large profiles
+        chunks = []
+        total_chunks = (len(icc_data) + max_chunk_data - 1) // max_chunk_data
+        for i in range(total_chunks):
+            chunk_data = icc_data[i * max_chunk_data:(i + 1) * max_chunk_data]
+            icc_header = b'ICC_PROFILE\x00' + bytes([i + 1, total_chunks])
+            marker_data = icc_header + chunk_data
+            marker_length = len(marker_data) + 2
+            chunks.append(b'\xff\xe2' + marker_length.to_bytes(2, 'big') + marker_data)
+        app2_segment = b''.join(chunks)
+
+    # Insert after SOI marker (first 2 bytes)
+    return jpeg_data[:2] + app2_segment + jpeg_data[2:]
+
+
 def optimize_with_pillow(img: Image.Image, quality: int, remove_metadata: bool) -> Tuple[bytes, dict]:
     """Optimize image using Pillow"""
+    # ICC profile is ALWAYS preserved — it's color rendering info, not personal metadata
+    icc_profile = extract_icc_profile(img)
+
     if img.mode in ('RGBA', 'P', 'CMYK'):
         img = img.convert('RGB')
 
@@ -450,6 +497,8 @@ def optimize_with_pillow(img: Image.Image, quality: int, remove_metadata: bool) 
     }
     if exif_data:
         save_kwargs['exif'] = exif_data
+    if icc_profile:
+        save_kwargs['icc_profile'] = icc_profile
 
     img.save(buffer, 'JPEG', **save_kwargs)
     buffer.seek(0)
@@ -459,6 +508,10 @@ def optimize_with_pillow(img: Image.Image, quality: int, remove_metadata: bool) 
 
 def optimize_with_mozjpeg(img: Image.Image, quality: int, remove_metadata: bool, mozjpeg_path: str, original_bytes: bytes) -> Tuple[bytes, dict]:
     """Optimize using MozJPEG"""
+    # Extract ICC profile BEFORE decoding (djpeg strips it)
+    # ICC profile is ALWAYS preserved — it's color rendering info, not personal metadata
+    icc_profile = extract_icc_profile(img)
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_path = os.path.join(tmpdir, "input.jpg")
         ppm_path = os.path.join(tmpdir, "temp.ppm")
@@ -487,7 +540,13 @@ def optimize_with_mozjpeg(img: Image.Image, quality: int, remove_metadata: bool,
                 pass
 
         with open(output_path, 'rb') as f:
-            return f.read(), {'width': img.width, 'height': img.height}
+            result_bytes = f.read()
+
+        # Restore ICC color profile (critical for color accuracy!)
+        if icc_profile:
+            result_bytes = inject_icc_profile(result_bytes, icc_profile)
+
+        return result_bytes, {'width': img.width, 'height': img.height}
 
 
 def optimize_lossless(original_bytes: bytes, remove_metadata: bool) -> bytes:
@@ -502,6 +561,15 @@ def optimize_lossless(original_bytes: bytes, remove_metadata: bool) -> bytes:
     if not jpegtran_path:
         return original_bytes
 
+    # Always extract ICC profile first (jpegtran -copy none would strip it)
+    icc_profile = None
+    try:
+        img = Image.open(io.BytesIO(original_bytes))
+        icc_profile = extract_icc_profile(img)
+        img.close()
+    except:
+        pass
+
     with tempfile.TemporaryDirectory() as tmpdir:
         input_path = os.path.join(tmpdir, "input.jpg")
         output_path = os.path.join(tmpdir, "output.jpg")
@@ -515,7 +583,13 @@ def optimize_lossless(original_bytes: bytes, remove_metadata: bool) -> bytes:
         subprocess.run(cmd, check=True, capture_output=True, timeout=60)
 
         with open(output_path, 'rb') as f:
-            return f.read()
+            result_bytes = f.read()
+
+        # Restore ICC profile if it was stripped by -copy none
+        if remove_metadata and icc_profile:
+            result_bytes = inject_icc_profile(result_bytes, icc_profile)
+
+        return result_bytes
 
 
 def main():
@@ -547,7 +621,7 @@ def main():
             if "Balanced" in mode:
                 quality = st.slider("Якість", 60, 100, 85)
 
-            remove_metadata = st.checkbox("Видалити EXIF", help="Зменшує розмір")
+            remove_metadata = st.checkbox("Видалити EXIF", help="Зменшує розмір. ICC кольоровий профіль зберігається завжди.")
 
     # File uploader
     st.markdown("""
